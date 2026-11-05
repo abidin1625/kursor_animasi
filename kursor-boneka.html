@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kursor Ajaib — Boneka Pengikut</title>
+
+  <!-- Font: Poppins -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       KURSOR AJAIB + 4 BONEKA PENGIKUT
+       Murni HTML + CSS + JavaScript vanilla (tanpa library/gambar)
+       - Kursor kustom mengikuti mouse dengan mulus
+       - 4 boneka (digambar pakai CSS) mengikuti berantai ala
+         "conga line", ada animasi jalan, condong, dan lompat
+       - Klik di mana saja: semua boneka melompat!
+       ============================================================ */
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Poppins', 'Segoe UI', Tahoma, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      background:
+        radial-gradient(rgba(74, 63, 53, 0.05) 1.2px, transparent 1.3px),
+        radial-gradient(620px 620px at 12% 18%, rgba(255, 139, 119, 0.16), transparent 62%),
+        radial-gradient(700px 700px at 88% 82%, rgba(103, 208, 178, 0.18), transparent 62%),
+        radial-gradient(520px 520px at 82% 10%, rgba(183, 156, 240, 0.14), transparent 62%),
+        #FBF3E7;
+      background-size: 26px 26px, auto, auto, auto, auto;
+    }
+
+    /* sembunyikan kursor bawaan (hanya untuk mouse / pointer presisi) */
+    @media (pointer: fine) {
+      body, body * { cursor: none !important; }
+    }
+
+    /* ---------- TEKS JUDUL ---------- */
+    .hud {
+      position: fixed;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(620px, 90vw);
+      text-align: center;
+      pointer-events: none;
+      z-index: 70;
+    }
+
+    .hud h1 {
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: #4A3F35;
+    }
+
+    .hud p {
+      margin-top: 8px;
+      font-size: 14.5px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: #9A8B7C;
+    }
+
+    .hud b { color: #E86A58; font-weight: 600; }
+
+    /* ============================================================
+       KURSOR KUSTOM
+       ============================================================ */
+    .cursor {
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 60;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    .cursor .ring {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 38px;
+      height: 38px;
+      margin: -19px 0 0 -19px;
+      border: 2.5px dashed #FF6F5E;
+      border-radius: 50%;
+      animation: spin 7s linear infinite;
+      filter: drop-shadow(0 0 6px rgba(255, 111, 94, 0.45));
+    }
+
+    .cursor .dot {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 9px;
+      height: 9px;
+      margin: -4.5px 0 0 -4.5px;
+      border-radius: 50%;
+      background: #FF6F5E;
+      box-shadow: 0 0 10px rgba(255, 111, 94, 0.8);
+    }
+
+    .cursor.click .ring { animation: pop 0.45s ease, spin 7s linear infinite; }
+
+    @keyframes spin  { to { transform: rotate(360deg); } }
+    @keyframes pop   { 0% { transform: scale(1); } 40% { transform: scale(0.62); } 100% { transform: scale(1); } }
+
+    /* sembunyikan kursor kustom di layar sentuh */
+    @media (pointer: coarse) {
+      .cursor { display: none; }
+    }
+
+    /* ============================================================
+       BONEKA (CSS art murni)
+       Susunan: .doll (posisi, digerakkan JS)
+                └ .tilt  (condong + skala, digerakkan JS)
+                  └ .bob (animasi jalan / napas / lompat, dari CSS)
+       .shadow adalah bayangan di tanah (tidak ikut melompat)
+       ============================================================ */
+    .doll {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+      will-change: transform;
+      z-index: var(--z, 30);
+    }
+
+    .tilt {
+      position: absolute;
+      left: -24px;
+      top: -50px;
+      width: 48px;
+      height: 56px;
+      transform-origin: 50% 100%;
+      will-change: transform;
+    }
+
+    .bob {
+      position: absolute;
+      inset: 0;
+      transform-origin: 50% 100%;
+    }
+
+    /* --- badan --- */
+    .body {
+      position: absolute;
+      left: 3px;
+      top: 10px;
+      width: 42px;
+      height: 41px;
+      background: var(--c);
+      border-radius: 48% 48% 44% 44%;
+      box-shadow: inset -4px -5px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .belly {
+      position: absolute;
+      left: 50%;
+      bottom: 3px;
+      width: 22px;
+      height: 16px;
+      margin-left: -11px;
+      background: rgba(255, 255, 255, 0.32);
+      border-radius: 50% 50% 45% 45%;
+    }
+
+    /* --- wajah --- */
+    .eye {
+      position: absolute;
+      top: 14px;
+      width: 6.5px;
+      height: 8px;
+      background: #3A2B26;
+      border-radius: 50%;
+      animation: blink 4.6s infinite;
+      animation-delay: var(--blink, 0s);
+    }
+    .eye::after {
+      content: "";
+      position: absolute;
+      top: 1.5px;
+      left: 1.2px;
+      width: 2.4px;
+      height: 2.4px;
+      border-radius: 50%;
+      background: #FFF;
+    }
+    .eye-l { left: 10px; }
+    .eye-r { right: 10px; }
+
+    @keyframes blink {
+      0%, 91%, 100% { transform: scaleY(1); }
+      94%, 97%      { transform: scaleY(0.08); }
+    }
+
+    .cheek {
+      position: absolute;
+      top: 24px;
+      width: 7.5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.42);
+    }
+    .cheek-l { left: 5px; }
+    .cheek-r { right: 5px; }
+
+    .mouth {
+      position: absolute;
+      top: 21px;
+      left: 50%;
+      width: 9px;
+      height: 6px;
+      margin-left: -4.5px;
+      border: 2px solid transparent;
+      border-bottom-color: #3A2B26;
+      border-radius: 0 0 9px 9px;
+    }
+
+    /* --- jambul kecil di kepala --- */
+    .tuft {
+      position: absolute;
+      left: 50%;
+      top: 3px;
+      width: 3px;
+      height: 9px;
+      margin-left: -1.5px;
+      background: var(--cd);
+      border-radius: 3px;
+      transform: rotate(9deg);
+    }
+    .tuft::before {
+      content: "";
+      position: absolute;
+      top: -5px;
+      left: -2.5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c);
+      box-shadow: inset -1px -1.5px 0 rgba(0, 0, 0, 0.10);
+    }
+
+    /* --- tangan --- */
+    .arm {
+      position: absolute;
+      top: 23px;
+      width: 9px;
+      height: 15px;
+      background: var(--cd);
+      border-radius: 50%;
+    }
+    .arm-l { left: -2px; transform: rotate(20deg); }
+    .arm-r { right: -2px; transform: rotate(-20deg); }
+
+    /* --- kaki --- */
+    .foot {
+      position: absolute;
+      bottom: 0;
+      width: 13px;
+      height: 9px;
+      background: var(--cd);
+      border-radius: 50% 50% 45% 45%;
+    }
+    .foot-l { left: 8px; }
+    .foot-r { right: 8px; }
+
+    /* --- bayangan --- */
+    .shadow {
+      position: absolute;
+      left: -15px;
+      top: 4px;
+      width: 30px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(74, 52, 32, 0.16);
+      filter: blur(1.5px);
+    }
+
+    /* ============================================================
+       ANIMASI BONEKA
+       ============================================================ */
+    /* sedang berjalan: bergoyang + kaki & tangan melangkah */
+    .is-walking .bob  { animation: walk-bob 0.42s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -0.13s); }
+    .is-walking .foot-l { animation: step 0.42s ease-in-out infinite; }
+    .is-walking .foot-r { animation: step 0.42s ease-in-out infinite; animation-delay: -0.21s; }
+    .is-walking .arm-l  { animation: swing 0.42s ease-in-out infinite; }
+    .is-walking .arm-r  { animation: swing 0.42s ease-in-out infinite; animation-delay: -0.21s; }
+
+    /* berdiri diam: napas pelan */
+    .doll:not(.is-walking) .bob { animation: breathe 2.4s ease-in-out infinite; }
+
+    @keyframes walk-bob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-4px); }
+    }
+    @keyframes step {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-4.5px); }
+    }
+    @keyframes swing {
+      0%, 100% { transform: rotate(22deg); }
+      50%      { transform: rotate(-4deg) translateY(-1px); }
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scaleY(1); }
+      50%      { transform: scaleY(0.96); }
+    }
+
+    /* lompat saat klik */
+    .doll.jump .bob {
+      animation: jump 0.62s cubic-bezier(0.34, 1.56, 0.5, 1) 1;
+    }
+    .doll.jump .shadow { animation: shadow-jump 0.62s ease 1; }
+
+    @keyframes jump {
+      0%  { transform: translateY(0) scaleY(1); }
+      30% { transform: translateY(-30px) scaleY(1.06); }
+      55% { transform: translateY(0) scaleY(0.9); }
+      72% { transform: translateY(-9px) scaleY(1.02); }
+      100% { transform: translateY(0) scaleY(1); }
+    }
+    @keyframes shadow-jump {
+      0%, 100% { transform: scaleX(1); opacity: 1; }
+      30%      { transform: scaleX(0.55); opacity: 0.45; }
+      55%      { transform: scaleX(1.18); opacity: 0.85; }
+    }
+
+    /* ============================================================
+       JEJAK & EFEK KLIK
+       ============================================================ */
+    .step {
+      position: fixed;
+      width: 7px;
+      height: 7px;
+      margin: -3.5px 0 0 -3.5px;
+      border-radius: 50%;
+      background: rgba(255, 111, 94, 0.38);
+      pointer-events: none;
+      z-index: 5;
+      animation: step-fade 0.8s ease-out forwards;
+    }
+
+    @keyframes step-fade {
+      from { transform: scale(0.6); opacity: 0.9; }
+      to   { transform: scale(1.7); opacity: 0; }
+    }
+
+    .ripple {
+      position: fixed;
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      border: 2.5px solid rgba(255, 111, 94, 0.55);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 55;
+      animation: ripple 0.62s ease-out forwards;
+    }
+
+    @keyframes ripple {
+      from { transform: scale(0.4); opacity: 1; }
+      to   { transform: scale(3.6); opacity: 0; }
+    }
+
+    /* ---------- tanpa JavaScript ---------- */
+    noscript p {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 13px;
+      color: #B0574A;
+      background: #FFF2EC;
+      border: 1px solid #F3CFC5;
+      border-radius: 20px;
+      padding: 8px 16px;
+      z-index: 80;
+    }
+
+    /* ---------- hormati preferensi pengguna ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      .bob, .foot, .arm, .eye, .ring, .cursor.click .ring { animation: none !important; }
+    }
+
+    /* ---------- layar kecil ---------- */
+    @media (max-width: 480px) {
+      .hud { top: 20px; }
+      .hud h1 { font-size: 22px; }
+      .hud p { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="hud">
+    <h1>Kursor Ajaib</h1>
+    <p>Gerakkan kursor ke mana pun — <b>4 boneka kecil</b> akan mengikutinya sambil berjalan.
+       Klik di mana saja untuk membuat mereka melompat!</p>
+  </header>
+
+  <!-- ================= BONEKA (×4) =================
+       Warna diatur lewat --c (badan) dan --cd (gelap).
+       Ingin hanya 3 boneka? Hapus salah satu blok .doll di bawah. -->
+  <div class="doll" style="--c:#FF8B77; --cd:#E06A57; --i:0; --blink:0.2s; --z:34">
+    <span class="tilt"><span class="bob">
+      <span class="tuft"></span>
+      <span class="body">
+        <span class="belly"></span>
+        <span class="arm arm-l"></span><span class="arm arm-r"></span>
+        <span class="eye eye-l"></span><span class="eye eye-r"></span>
+        <span class="cheek cheek-l"></span><span class="cheek cheek-r"></span>
+        <span class="mouth"></span>
+      </span>
+      <span class="foot foot-l"></span><span class="foot foot-r"></span>
+    </span></span>
+    <span class="shadow"></span>
+  </div>
+
+  <div class="doll" style="--c:#5FCBAC; --cd:#3FAD8F; --i:1; --blink:1.4s; --z:32">
+    <span class="tilt"><span class="bob">
+      <span class="tuft"></span>
+      <span class="body">
+        <span class="belly"></span>
+        <span class="arm arm-l"></span><span class="arm arm-r"></span>
+        <span class="eye eye-l"></span><span class="eye eye-r"></span>
+        <span class="cheek cheek-l"></span><span class="cheek cheek-r"></span>
+        <span class="mouth"></span>
+      </span>
+      <span class="foot foot-l"></span><span class="foot foot-r"></span>
+    </span></span>
+    <span class="shadow"></span>
+  </div>
+
+  <div class="doll" style="--c:#FFC964; --cd:#E5A83E; --i:2; --blink:2.6s; --z:30">
+    <span class="tilt"><span class="bob">
+      <span class="tuft"></span>
+      <span class="body">
+        <span class="belly"></span>
+        <span class="arm arm-l"></span><span class="arm arm-r"></span>
+        <span class="eye eye-l"></span><span class="eye eye-r"></span>
+        <span class="cheek cheek-l"></span><span class="cheek cheek-r"></span>
+        <span class="mouth"></span>
+      </span>
+      <span class="foot foot-l"></span><span class="foot foot-r"></span>
+    </span></span>
+    <span class="shadow"></span>
+  </div>
+
+  <div class="doll" style="--c:#B79CF0; --cd:#9A7BD8; --i:3; --blink:3.5s; --z:28">
+    <span class="tilt"><span class="bob">
+      <span class="tuft"></span>
+      <span class="body">
+        <span class="belly"></span>
+        <span class="arm arm-l"></span><span class="arm arm-r"></span>
+        <span class="eye eye-l"></span><span class="eye eye-r"></span>
+        <span class="cheek cheek-l"></span><span class="cheek cheek-r"></span>
+        <span class="mouth"></span>
+      </span>
+      <span class="foot foot-l"></span><span class="foot foot-r"></span>
+    </span></span>
+    <span class="shadow"></span>
+  </div>
+
+  <!-- ================= KURSOR KUSTOM ================= -->
+  <div class="cursor" id="cursor" aria-hidden="true">
+    <span class="ring"></span>
+    <span class="dot"></span>
+  </div>
+
+  <noscript><p>Aktifkan JavaScript agar boneka bisa berjalan mengikuti kursor.</p></noscript>
+
+  <script>
+    /* ============================================================
+       LOGIKA PENGIKUT (murni JavaScript vanilla)
+       - Kursor mengikuti pointer dengan lerp (halus)
+       - Setiap boneka mengikuti "pemimpin"-nya (kursor → boneka 1
+         → boneka 2 → dst) dan menjaga jarak, seperti barisan conga
+       ============================================================ */
+    (function () {
+      const cursor = document.getElementById('cursor');
+      const dolls  = Array.from(document.querySelectorAll('.doll'));
+
+      /* pengaturan per boneka (urutan = urutan DOM) */
+      const GAP   = [56, 62, 66, 70];   // jarak minimal dari pemimpinnya
+      const PULL  = [0.16, 0.13, 0.11, 0.09]; // kecepatan mengejar
+      const SCALE = [1, 0.92, 0.85, 0.8];     // makin ke belakang makin kecil
+
+      let mx = innerWidth / 2, my = innerHeight / 2;  // posisi pointer
+      const cur = { x: mx, y: my };                    // kursor (dihaluskan)
+
+      /* posisi awal boneka: menyebar di dalam layar, lalu berjalan masuk */
+      function initialSpot(i) {
+        return {
+          x: Math.min(70 + i * 72, innerWidth - 60),
+          y: Math.min(innerHeight * 0.55 + (i % 2) * 42, innerHeight - 90),
+          r: 0,
+          walk: false
+        };
+      }
+      const st = dolls.map(function (_, i) { return initialSpot(i); });
+
+      /* saat layar berubah ukuran, pastikan semua boneka tetap terlihat */
+      addEventListener('resize', function () {
+        mx = Math.max(40, Math.min(mx, innerWidth - 40));
+        my = Math.max(40, Math.min(my, innerHeight - 40));
+        st.forEach(function (s) {
+          s.x = Math.max(40, Math.min(s.x, innerWidth - 40));
+          s.y = Math.max(40, Math.min(s.y, innerHeight - 40));
+        });
+      });
+
+      addEventListener('pointermove', function (e) {
+        mx = e.clientX;
+        my = e.clientY;
+        spawnStep(e.clientX, e.clientY);
+      });
+
+      /* --- jejak titik kecil di belakang kursor --- */
+      let lastX = -1e4, lastY = -1e4;
+      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      function spawnStep(x, y) {
+        if (reduceMotion) return;
+        if (Math.hypot(x - lastX, y - lastY) < 80) return; // jangan terlalu rapat
+        lastX = x; lastY = y;
+        const s = document.createElement('span');
+        s.className = 'step';
+        s.style.left = x + 'px';
+        s.style.top  = (y + 16) + 'px';
+        document.body.appendChild(s);
+        setTimeout(function () { s.remove(); }, 800);
+      }
+
+      /* --- klik: kursor berdenyut + semua boneka melompat --- */
+      addEventListener('pointerdown', function (e) {
+        cursor.classList.remove('click');
+        void cursor.offsetWidth;               // paksa ulang animasi
+        cursor.classList.add('click');
+
+        dolls.forEach(function (d) {
+          d.classList.remove('jump');
+          void d.offsetWidth;
+          d.classList.add('jump');
+        });
+
+        const r = document.createElement('span');
+        r.className = 'ripple';
+        r.style.left = e.clientX + 'px';
+        r.style.top  = e.clientY + 'px';
+        document.body.appendChild(r);
+        setTimeout(function () { r.remove(); }, 650);
+      });
+
+      /* --- loop utama --- */
+      let prev = performance.now();
+
+      function tick(now) {
+        const dt = Math.min(Math.max((now - prev) / 16.7, 0.25), 3); // normalisasi FPS
+        prev = now;
+
+        /* 1. kursor mengejar pointer */
+        cur.x += (mx - cur.x) * 0.4 * dt;
+        cur.y += (my - cur.y) * 0.4 * dt;
+        cursor.style.transform = 'translate3d(' + cur.x + 'px,' + cur.y + 'px,0)';
+
+        /* 2. boneka mengikuti berantai */
+        let tx = cur.x, ty = cur.y;
+
+        dolls.forEach(function (d, i) {
+          const s = st[i];
+          const dx = tx - s.x, dy = ty - s.y;
+          const dist = Math.hypot(dx, dy) || 0.001;
+          const pull = dist - GAP[i];          // sisa jarak yang boleh ditempuh
+
+          if (pull > 0.1) {
+            const step = pull * PULL[i] * dt;  // makin dekat makin lambat
+            s.x += (dx / dist) * step;
+            s.y += (dy / dist) * step;
+          }
+
+          /* condong ke arah gerakan */
+          const targetR = Math.max(-13, Math.min(13, dx * 0.35));
+          s.r += (targetR - s.r) * 0.12 * dt;
+
+          d.style.transform = 'translate3d(' + s.x + 'px,' + s.y + 'px,0)';
+          d.firstElementChild.style.transform =
+            'rotate(' + s.r.toFixed(2) + 'deg) scale(' + SCALE[i] + ')';
+
+          /* status jalan / diam */
+          const walking = pull > 3;
+          if (walking !== s.walk) {
+            s.walk = walking;
+            d.classList.toggle('is-walking', walking);
+          }
+
+          tx = s.x; ty = s.y;                  // boneka berikutnya mengejar boneka ini
+        });
+
+        requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>
