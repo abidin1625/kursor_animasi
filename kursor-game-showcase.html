@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kursor Game Showcase — 10 Pilihan Interaktif</title>
+  <style>
+    /* ==========================================
+       RESET & BASE STYLES
+       ========================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 8px;
+      color: #38bdf8;
+    }
+
+    p.subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 32px;
+      font-size: 0.95rem;
+    }
+
+    /* ==========================================
+       GRID LAYOUT
+       ========================================== */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: #38bdf8;
+      box-shadow: 0 10px 20px rgba(56, 189, 248, 0.15);
+    }
+
+    .card.active {
+      border-color: #22c55e;
+      background: #111827;
+      box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card-num {
+      background: #334155;
+      color: #38bdf8;
+      font-weight: bold;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .card-desc {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .preview-box {
+      margin-top: 14px;
+      height: 60px;
+      background: #0f172a;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed #475569;
+    }
+
+    /* ==========================================
+       CUSTOM CURSOR RENDERER
+       ========================================== */
+    #custom-cursor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 32px;
+      height: 32px;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s ease;
+      opacity: 0;
+    }
+
+    /* --- Style Kursor 1: Crosshair Sci-Fi Hologram --- */
+    .cursor-style-1 {
+      width: 28px;
+      height: 28px;
+      border: 2px solid #38bdf8;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #38bdf8;
+      position: relative;
+      animation: spin 6s linear infinite;
+    }
+    .cursor-style-1::before, .cursor-style-1::after {
+      content: '';
+      position: absolute;
+      background: #38bdf8;
+    }
+    .cursor-style-1::before { top: -4px; bottom: -4px; left: 50%; width: 2px; transform: translateX(-50%); }
+    .cursor-style-1::after { left: -4px; right: -4px; top: 50%; height: 2px; transform: translateY(-50%); }
+
+    /* --- Style Kursor 2: Sarung Tangan Besi Ksatria --- */
+    .cursor-style-2 {
+      font-size: 26px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+    }
+
+    /* --- Style Kursor 3: Api Menyala Dinamis --- */
+    .cursor-style-3 {
+      width: 16px;
+      height: 16px;
+      background: radial-gradient(circle, #f97316 0%, #ef4444 100%);
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 0 12px #f97316;
+      animation: pulse-fire 0.6s ease-in-out infinite alternate;
+    }
+
+    /* --- Style Kursor 4: Bidik Senapan Sniper --- */
+    .cursor-style-4 {
+      width: 32px;
+      height: 32px;
+      border: 1px solid #ef4444;
+      border-radius: 50%;
+      position: relative;
+    }
+    .cursor-style-4::before {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #ef4444;
+      border-radius: 50%;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* --- Style Kursor 5: Portal Sihir Misterius --- */
+    .cursor-style-5 {
+      width: 30px;
+      height: 30px;
+      border: 2px dashed #a855f7;
+      border-radius: 50%;
+      box-shadow: 0 0 12px #a855f7;
+      animation: spin 3s linear infinite;
+    }
+
+    /* --- Style Kursor 6: Bidik Laser Minimalis --- */
+    .cursor-style-6 {
+      width: 10px;
+      height: 10px;
+      background: #ef4444;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #ef4444;
+      border: 2px solid #ffffff;
+    }
+
+    /* --- Style Kursor 7: Cakar Monster Buas --- */
+    .cursor-style-7 {
+      font-size: 24px;
+      filter: drop-shadow(0 0 6px #dc2626);
+    }
+
+    /* --- Style Kursor 8: Pedang Pendek Piksel --- */
+    .cursor-style-8 {
+      font-size: 26px;
+      transform: rotate(-45deg);
+    }
+
+    /* --- Style Kursor 9: Jaring Energi Kuantum --- */
+    .cursor-style-9 {
+      width: 26px;
+      height: 26px;
+      border: 1px solid #22c55e;
+      transform: rotate(45deg);
+      box-shadow: 0 0 8px #22c55e;
+      animation: pulse-green 1.2s infinite;
+    }
+
+    /* --- Style Kursor 10: Kunai Ninja Beracun --- */
+    .cursor-style-10 {
+      font-size: 24px;
+      filter: drop-shadow(0 0 8px #10b981);
+    }
+
+    /* ANIMATIONS */
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes pulse-fire { 100% { transform: rotate(-45deg) scale(1.2); box-shadow: 0 0 18px #ef4444; } }
+    @keyframes pulse-green { 50% { transform: rotate(45deg) scale(1.1); box-shadow: 0 0 14px #22c55e; } }
+  </style>
+</head>
+<body>
+
+  <h1>10 Ide Kursor Game Interaktif</h1>
+  <p class="subtitle">Klik salah satu kartu di bawah ini untuk mencoba kursor secara langsung di layar!</p>
+
+  <div class="grid">
+    <!-- Card 1 -->
+    <div class="card" onclick="setCursor(1)">
+      <div class="card-header">
+        <div class="card-num">1</div>
+        <div class="card-title">Crosshair Sci-Fi Hologram</div>
+      </div>
+      <p class="card-desc">Kursor reticle futuristik berputar pelan dengan aksen neon biru. Sangat cocok untuk game FPS taktis atau sci-fi shooter.</p>
+      <div class="preview-box">
+        <div class="cursor-style-1"></div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="card" onclick="setCursor(2)">
+      <div class="card-header">
+        <div class="card-num">2</div>
+        <div class="card-title">Sarung Tangan Ksatria</div>
+      </div>
+      <p class="card-desc">Kursor berbentuk tangan lapis baja abad pertengahan yang menunjuk lurus, memberikan kesan kokoh untuk game RPG/Strategi.</p>
+      <div class="preview-box">
+        <div class="cursor-style-2">🪓</div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="card" onclick="setCursor(3)">
+      <div class="card-header">
+        <div class="card-num">3</div>
+        <div class="card-title">Api Menyala Dinamis</div>
+      </div>
+      <p class="card-desc">Lidah api berkobar yang berdenyut mengikuti arah mouse, ideal untuk game action atau petualangan elemen api.</p>
+      <div class="preview-box">
+        <div class="cursor-style-3"></div>
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="card" onclick="setCursor(4)">
+      <div class="card-header">
+        <div class="card-num">4</div>
+        <div class="card-title">Bidik Senapan Sniper</div>
+      </div>
+      <p class="card-desc">Lensa teropong bidik presisi tinggi dengan titik merah tengah, dirancang khusus untuk game simulasi militer.</p>
+      <div class="preview-box">
+        <div class="cursor-style-4"></div>
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="card" onclick="setCursor(5)">
+      <div class="card-header">
+        <div class="card-num">5</div>
+        <div class="card-title">Portal Sihir Misterius</div>
+      </div>
+      <p class="card-desc">Lingkaran sihir magis berputar dengan pancaran energi ungu, pas untuk game penyihir atau RPG fantasi gelap.</p>
+      <div class="preview-box">
+        <div class="cursor-style-5"></div>
+      </div>
+    </div>
+
+    <!-- Card 6 -->
+    <div class="card" onclick="setCursor(6)">
+      <div class="card-header">
+        <div class="card-num">6</div>
+        <div class="card-title">Bidik Laser Minimalis</div>
+      </div>
+      <p class="card-desc">Titik merah laser terang berbingkai putih bersih, memberikan respon cepat untuk antarmuka game cyberpunk.</p>
+      <div class="preview-box">
+        <div class="cursor-style-6"></div>
+      </div>
+    </div>
+
+    <!-- Card 7 -->
+    <div class="card" onclick="setCursor(7)">
+      <div class="card-header">
+        <div class="card-num">7</div>
+        <div class="card-title">Cakar Monster Buas</div>
+      </div>
+      <p class="card-desc">Cakar tajam bercahaya merah yang mencengkeram layar, cocok untuk game horor bertahan hidup atau hack-and-slash.</p>
+      <div class="preview-box">
+        <div class="cursor-style-7">🐾</div>
+      </div>
+    </div>
+
+    <!-- Card 8 -->
+    <div class="card" onclick="setCursor(8)">
+      <div class="card-header">
+        <div class="card-num">8</div>
+        <div class="card-title">Pedang Pendek Piksel</div>
+      </div>
+      <p class="card-desc">Pedang retro bergaya 8-bit yang mengarah menyerong, memberikan sentuhan nostalgia untuk game indie RPG retro.</p>
+      <div class="preview-box">
+        <div class="cursor-style-8">🗡️</div>
+      </div>
+    </div>
+
+    <!-- Card 9 -->
+    <div class="card" onclick="setCursor(9)">
+      <div class="card-header">
+        <div class="card-num">9</div>
+        <div class="card-title">Jaring Energi Kuantum</div>
+      </div>
+      <p class="card-desc">Garis geometri poligonal hijau bercahaya, sangat cocok untuk game strategi luar angkasa dan teknologi masa depan.</p>
+      <div class="preview-box">
+        <div class="cursor-style-9"></div>
+      </div>
+    </div>
+
+    <!-- Card 10 -->
+    <div class="card" onclick="setCursor(10)">
+      <div class="card-header">
+        <div class="card-num">10</div>
+        <div class="card-title">Kunai Ninja Beracun</div>
+      </div>
+      <p class="card-desc">Pisau lempar tradisional dengan aura hijau racun di ujungnya, ideal untuk game aksi bertema stealth atau shinobi.</p>
+      <div class="preview-box">
+        <div class="cursor-style-10">🗡️</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Element Cursor Custom -->
+  <div id="custom-cursor"></div>
+
+  <script>
+    const cursor = document.getElementById('custom-cursor');
+    const cards = document.querySelectorAll('.card');
+
+    // Mengikuti posisi mouse
+    document.addEventListener('mousemove', (e) => {
+      cursor.style.left = `${e.clientX}px`;
+      cursor.style.top = `${e.clientY}px`;
+    });
+
+    // Sembunyikan jika mouse keluar jendela browser
+    document.addEventListener('mouseleave', () => {
+      cursor.style.opacity = '0';
+    });
+
+    // Tampilkan jika mouse masuk jendela browser
+    document.addEventListener('mouseenter', () => {
+      if (cursor.className !== '') {
+        cursor.style.opacity = '1';
+      }
+    });
+
+    // Fungsi ganti kursor
+    function setCursor(id) {
+      // Reset kelas aktif pada kartu
+      cards.forEach((card, idx) => {
+        if (idx === id - 1) {
+          card.classList.add('active');
+        } else {
+          card.classList.remove('active');
+        }
+      });
+
+      // Tampilkan custom cursor & sembunyikan kursor bawaan browser
+      cursor.style.opacity = '1';
+      document.body.style.cursor = 'none';
+
+      // Ganti tampilan kursor sesuai Pilihan
+      let content = '';
+      switch (id) {
+        case 1: content = '<div class="cursor-style-1"></div>'; break;
+        case 2: content = '<div class="cursor-style-2">🪓</div>'; break;
+        case 3: content = '<div class="cursor-style-3"></div>'; break;
+        case 4: content = '<div class="cursor-style-4"></div>'; break;
+        case 5: content = '<div class="cursor-style-5"></div>'; break;
+        case 6: content = '<div class="cursor-style-6"></div>'; break;
+        case 7: content = '<div class="cursor-style-7">🐾</div>'; break;
+        case 8: content = '<div class="cursor-style-8">🗡️</div>'; break;
+        case 9: content = '<div class="cursor-style-9"></div>'; break;
+        case 10: content = '<div class="cursor-style-10">🗡️</div>'; break;
+      }
+      cursor.innerHTML = content;
+    }
+  </script>
+</body>
+</html>
