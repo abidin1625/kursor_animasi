@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="color-scheme" content="dark"/>
+<title>KABUR! — Game Menghindar Kursor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rubik:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:#05060e;overflow:hidden;cursor:none;touch-action:none;overscroll-behavior:none;
+    user-select:none;-webkit-user-select:none;
+    font-family:'Rubik',system-ui,sans-serif;color:#cfd6e6;
+  }
+  canvas#game{position:fixed;inset:0;display:block}
+
+  /* vignette + efek layar */
+  #vig{position:fixed;inset:0;z-index:10;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(2,3,8,.55) 100%)}
+  #flash{position:fixed;inset:0;z-index:12;pointer-events:none;opacity:0;
+    background:radial-gradient(ellipse at center, rgba(255,60,90,.28), rgba(255,60,90,.55))}
+  #tint{position:fixed;inset:0;z-index:11;pointer-events:none;opacity:0;transition:opacity .35s;
+    background:radial-gradient(ellipse at center, rgba(90,255,160,.10), rgba(90,255,160,.16))}
+  body.slow #tint{opacity:1}
+
+  /* HUD */
+  #hud{position:fixed;inset:0;z-index:20;pointer-events:none}
+  #hud.hidden{display:none}
+  #hudLeft{position:absolute;left:22px;top:18px}
+  #hearts{display:flex;gap:6px}
+  #hearts svg{width:22px;height:20px;filter:drop-shadow(0 0 6px rgba(255,93,122,.6))}
+  #hearts .lost svg{filter:none;opacity:.9}
+  #wave{margin-top:8px;font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:3px;color:#8b93b8}
+  #hudCenter{position:absolute;left:50%;top:14px;transform:translateX(-50%);text-align:center}
+  #score{font-family:'Orbitron',sans-serif;font-weight:900;font-size:36px;color:#fff;
+    text-shadow:0 0 18px rgba(77,227,255,.55);line-height:1}
+  #combo{height:20px;margin-top:5px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;
+    letter-spacing:2px;color:#ffd94d;text-shadow:0 0 12px rgba(255,217,77,.6)}
+  #combo.pop{animation:comboPop .25s ease-out}
+  @keyframes comboPop{0%{transform:scale(1.5)}100%{transform:scale(1)}}
+  #hudRight{position:absolute;right:22px;top:18px;text-align:right}
+  #best{font-size:11px;letter-spacing:2px;color:#8b93b8;text-transform:uppercase}
+  #time{font-family:'Orbitron',sans-serif;font-size:15px;color:#cfd6e6;margin-top:4px}
+  #mute{margin-top:10px;width:34px;height:30px;border-radius:8px;border:1px solid rgba(130,160,255,.3);
+    background:rgba(16,20,38,.7);cursor:pointer;pointer-events:auto;display:inline-grid;place-items:center}
+  #mute:hover{border-color:rgba(77,227,255,.7)}
+  #mute svg{width:17px;height:17px;fill:#9fb0d8}
+  #mute .off{display:none}
+  #mute.muted .on{display:none}
+  #mute.muted .off{display:block}
+
+  /* bar waktu lambat */
+  #slowbar{position:fixed;left:50%;top:70px;transform:translateX(-50%);width:180px;height:5px;z-index:20;
+    background:rgba(255,255,255,.09);border-radius:99px;overflow:hidden;pointer-events:none}
+  #slowbar.hidden{display:none}
+  #slowbar i{display:block;height:100%;width:100%;background:#7dffa8;border-radius:99px;
+    box-shadow:0 0 10px #7dffa8}
+
+  /* overlay */
+  .overlay{position:fixed;inset:0;z-index:30;display:grid;place-items:center;cursor:default;
+    background:rgba(4,6,14,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .overlay.hidden{display:none}
+  .card{background:rgba(13,16,30,.92);border:1px solid rgba(120,160,255,.25);border-radius:20px;
+    padding:36px 46px;text-align:center;max-width:520px;box-shadow:0 0 60px rgba(30,60,160,.25)}
+  .card h1{font-family:'Orbitron',sans-serif;font-weight:900;font-size:54px;letter-spacing:8px;color:#fff;
+    text-shadow:0 0 24px rgba(77,227,255,.7)}
+  .card h1 span{color:#ff4d6d;text-shadow:0 0 24px rgba(255,77,109,.7)}
+  .card h2{font-family:'Orbitron',sans-serif;font-weight:700;font-size:32px;letter-spacing:5px;color:#fff;
+    text-shadow:0 0 20px rgba(255,77,109,.6)}
+  .sub{margin-top:6px;font-size:13px;letter-spacing:3px;color:#8b93b8;text-transform:uppercase}
+  .rules{list-style:none;margin:22px 0 6px;text-align:left;font-size:14px;line-height:2.15;color:#c4cce4}
+  .rules i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:10px;vertical-align:1px}
+  .dot.cyan{background:#4de3ff;box-shadow:0 0 8px #4de3ff}
+  .dot.gold{background:#ffd94d;box-shadow:0 0 8px #ffd94d}
+  .dot.green{background:#7dffa8;box-shadow:0 0 8px #7dffa8}
+  .dot.red{background:#ff4d6d;box-shadow:0 0 8px #ff4d6d}
+  .btn{margin-top:22px;font-family:'Orbitron',sans-serif;font-weight:700;font-size:15px;letter-spacing:4px;
+    color:#041018;background:linear-gradient(180deg,#7deaff,#35c8ef);border:none;border-radius:999px;
+    padding:15px 42px;cursor:pointer;box-shadow:0 0 24px rgba(77,227,255,.45);transition:transform .15s,box-shadow .15s}
+  .btn:hover{transform:scale(1.06);box-shadow:0 0 34px rgba(77,227,255,.7)}
+  .hintkey{margin-top:14px;font-size:11px;letter-spacing:3px;color:#5d657f;text-transform:uppercase}
+  .stats{display:flex;gap:28px;justify-content:center;margin-top:20px}
+  .stats div{display:flex;flex-direction:column;gap:5px}
+  .stats span{font-size:10px;letter-spacing:3px;color:#8b93b8}
+  .stats b{font-family:'Orbitron',sans-serif;font-size:26px;color:#fff}
+  #newBest{margin-top:14px;font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:3px;color:#ffd94d;
+    text-shadow:0 0 14px rgba(255,217,77,.7);animation:comboPop .4s ease-out}
+  #newBest.hidden{display:none}
+
+  @media (pointer:coarse){
+    body{cursor:auto}
+    .touchOnly{display:block !important}
+  }
+  .touchOnly{display:none;margin-top:12px;font-size:12px;color:#8b93b8}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vig"></div>
+<div id="tint"></div>
+<div id="flash"></div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="hudLeft">
+    <div id="hearts"></div>
+    <div id="wave">GELOMBANG 1</div>
+  </div>
+  <div id="hudCenter">
+    <div id="score">0</div>
+    <div id="combo"></div>
+  </div>
+  <div id="hudRight">
+    <div id="best">TERBAIK 0</div>
+    <div id="time">0.0s</div>
+    <button id="mute" title="Suara (M)">
+      <svg class="on" viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9H3zm13.5 3c0-1.8-1-3.3-2.5-4v8c1.5-.7 2.5-2.2 2.5-4zM14 3.2v2.1c2.9.9 5 3.5 5 6.7s-2.1 5.8-5 6.7v2.1c4-.9 7-4.5 7-8.8s-3-7.9-7-8.8z"/></svg>
+      <svg class="off" viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9H3zm18.6 8.2-2.8-2.8 2.8-2.8-1.4-1.4-2.8 2.8-2.8-2.8-1.4 1.4 2.8 2.8-2.8 2.8 1.4 1.4 2.8-2.8 2.8 2.8z"/></svg>
+    </button>
+  </div>
+</div>
+<div id="slowbar" class="hidden"><i></i></div>
+
+<!-- MENU -->
+<div id="menu" class="overlay">
+  <div class="card">
+    <h1>KABUR<span>!!</span></h1>
+    <p class="sub">game menghindar — hanya dengan kursor</p>
+    <ul class="rules">
+      <li><i class="dot cyan"></i> Kursor-mu adalah sang pemain. Jangan sentuh musuh!</li>
+      <li><i class="dot gold"></i> Kumpulkan bintang — ambil cepat untuk kombo skor.</li>
+      <li><i class="dot green"></i> Bola hijau = waktu melambat sesaat.</li>
+      <li><i class="dot red"></i> Kamu punya 3 nyawa. Bertahanlah selama mungkin.</li>
+    </ul>
+    <button id="btnStart" class="btn">MULAI MAIN</button>
+    <p class="hintkey">atau tekan spasi · esc untuk jeda · m untuk suara</p>
+    <p class="touchOnly">Di layar sentuh: sentuh &amp; geser untuk bergerak</p>
+  </div>
+</div>
+
+<!-- JEDA -->
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <h2>JEDA</h2>
+    <p class="sub">tarik napas dulu...</p>
+    <button id="btnResume" class="btn">LANJUT</button>
+    <p class="hintkey">atau tekan spasi / esc</p>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <h2>TERTANGKAP!</h2>
+    <div class="stats">
+      <div><span>SKOR</span><b id="finalScore">0</b></div>
+      <div><span>WAKTU</span><b id="finalTime">0s</b></div>
+      <div><span>TERBAIK</span><b id="finalBest">0</b></div>
+    </div>
+    <div id="newBest" class="hidden">REKOR BARU!</div>
+    <button id="btnRetry" class="btn">MAIN LAGI</button>
+    <p class="hintkey">atau tekan spasi</p>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- kanvas ---------- */
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+let W, H, DPR, bgGrad;
+function resize(){
+  W = innerWidth; H = innerHeight;
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  cvs.width = W*DPR; cvs.height = H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  bgGrad = ctx.createRadialGradient(W/2,H*0.35,0, W/2,H*0.35, Math.max(W,H)*0.8);
+  bgGrad.addColorStop(0,'#0b0f22');
+  bgGrad.addColorStop(0.6,'#05060e');
+  bgGrad.addColorStop(1,'#030409');
+}
+addEventListener('resize', resize); resize();
+
+/* ---------- elemen DOM ---------- */
+const $ = id => document.getElementById(id);
+const hud=$('hud'), scoreEl=$('score'), comboEl=$('combo'), timeEl=$('time'),
+      bestEl=$('best'), waveEl=$('wave'), heartsEl=$('hearts'),
+      menuEl=$('menu'), pauseEl=$('pause'), overEl=$('over'),
+      flashEl=$('flash'), slowbarEl=$('slowbar'), slowfill=slowbarEl.querySelector('i');
+
+/* ---------- status permainan ---------- */
+let state='menu';           // menu | playing | paused | over
+let score=0, lives=3, elapsed=0, waveN=1, combo=0, comboTimer=0;
+let spawnTimer=1.6, starTimer=0.6;
+let timeScale=1, slowTimer=0, shake=0, dying=false, dieT=0;
+let best=0;
+try{ best = +(localStorage.getItem('kabur_best')||0); }catch(e){}
+bestEl.textContent = 'TERBAIK ' + best;
+
+const TAU = Math.PI*2;
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+
+/* ---------- input ---------- */
+const mouse={x:W/2, y:H/2};
+addEventListener('pointermove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; }, {passive:true});
+document.addEventListener('contextmenu', e=>e.preventDefault());
+document.addEventListener('mouseleave', ()=>pauseGame());
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) pauseGame(); });
+
+/* ---------- pemain ---------- */
+const player={x:W/2, y:H/2, r:9, inv:0, trail:[]};
+
+/* ---------- dunia ---------- */
+const enemies=[], pickups=[], parts=[], texts=[], warns=[];
+
+/* bintang latar */
+const stars=[];
+for(let i=0;i<90;i++) stars.push({x:Math.random(), y:Math.random(), r:rand(.5,1.6), ph:rand(0,TAU)});
+
+/* ---------- audio (WebAudio, tanpa aset) ---------- */
+let actx=null, muted=false;
+function audio(){
+  if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(actx && actx.state==='suspended') actx.resume();
+}
+function beep(f0,f1,dur,type,vol){
+  if(muted||!actx) return;
+  try{
+    const t0=actx.currentTime, o=actx.createOscillator(), g=actx.createGain();
+    o.type=type; o.frequency.setValueAtTime(f0,t0);
+    if(f1) o.frequency.exponentialRampToValueAtTime(Math.max(1,f1), t0+dur);
+    g.gain.setValueAtTime(vol,t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t0); o.stop(t0+dur+0.02);
+  }catch(e){}
+}
+const sfx={
+  pickup:c=>beep(520+c*70, 900+c*90, .12, 'square', .15),
+  slow:()=>beep(900,180,.5,'sine',.2),
+  hit:()=>beep(170,55,.3,'sawtooth',.3),
+  wave:()=>{ beep(440,660,.14,'triangle',.18); setTimeout(()=>beep(660,990,.2,'triangle',.18),130); },
+  over:()=>beep(300,55,.9,'sawtooth',.28)
+};
+function toggleMute(){ muted=!muted; $('mute').classList.toggle('muted', muted); }
+$('mute').addEventListener('click', e=>{ e.stopPropagation(); audio(); toggleMute(); });
+
+/* ---------- efek ---------- */
+function burst(x,y,color,n,spd){
+  n=n||18; spd=spd||240;
+  for(let i=0;i<n;i++){
+    const a=Math.random()*TAU, v=rand(.25,1)*spd;
+    if(parts.length>400) parts.shift();
+    parts.push({x,y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:1, dec:rand(1.1,2.1), r:rand(1.5,3.5), c:color});
+  }
+}
+function floatText(x,y,str,c,s){
+  texts.push({x,y,str,c,s:s||15,life:1});
+  if(texts.length>30) texts.shift();
+}
+function screenFlash(){
+  flashEl.animate([{opacity:.5},{opacity:0}], {duration:380, easing:'ease-out'});
+}
+
+/* ---------- spawn musuh ---------- */
+const speedFactor = ()=>Math.min(1.9, 1+elapsed*0.01);
+const spawnInterval = ()=>Math.max(0.4, 1.5-elapsed*0.014);
+
+function edgePoint(){
+  const s=(Math.random()*4)|0;
+  if(s===0) return {x:rand(0,W), y:-24};
+  if(s===1) return {x:W+24, y:rand(0,H)};
+  if(s===2) return {x:rand(0,W), y:H+24};
+  return {x:-24, y:rand(0,H)};
+}
+function spawnEnemy(){
+  if(enemies.length>=26) return;
+  const drifterP = 0.2 + Math.min(0.3, elapsed*0.003);
+  const type = Math.random()<drifterP ? 'drifter' : 'seeker';
+  const p = edgePoint();
+  warns.push({x:p.x, y:p.y, cx:clamp(p.x,18,W-18), cy:clamp(p.y,18,H-18), t:.55, type});
+}
+function makeEnemy(w){
+  const sf=speedFactor();
+  if(w.type==='seeker'){
+    enemies.push({type:'seeker', x:w.x, y:w.y, vx:rand(-40,40), vy:rand(-40,40), r:11, a:0});
+  }else{
+    const a=rand(0,TAU), sp=rand(80,120)*sf;
+    enemies.push({type:'drifter', x:w.x, y:w.y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, r:10, a:rand(0,TAU)});
+  }
+}
+function spawnPickup(){
+  const isSlow = Math.random()<0.13 && slowTimer<=0 && !pickups.some(p=>p.type==='slow');
+  let x=W/2, y=H/2;
+  for(let i=0;i<9;i++){
+    x=rand(60,W-60); y=rand(90,H-90);
+    if(Math.hypot(x-player.x,y-player.y)>130) break;
+  }
+  pickups.push({type:isSlow?'slow':'star', x, y, r:9, ph:rand(0,TAU), life:9});
+}
+
+/* ---------- nyawa & HUD ---------- */
+const HEART='<svg viewBox="0 0 20 18"><path fill="#ff5d7a" d="M10 17 C4 12 1 8.5 1 5.5 C1 3 3 1 5.5 1 C7.5 1 9 2 10 4 C11 2 12.5 1 14.5 1 C17 1 19 3 19 5.5 C19 8.5 16 12 10 17 Z"/></svg>';
+function buildHearts(){
+  let h='';
+  for(let i=0;i<3;i++) h+='<span data-i="'+i+'">'+HEART+'</span>';
+  heartsEl.innerHTML=h;
+}
+function updateHearts(){
+  for(const s of heartsEl.children) s.classList.toggle('lost', +s.dataset.i >= lives);
+}
+function setScore(v){
+  score=v; scoreEl.textContent=score;
+}
+function setCombo(c){
+  combo=c; comboTimer = c>0 ? 4 : 0;
+  if(c>=2){
+    comboEl.textContent='KOMBO x'+c;
+    comboEl.classList.remove('pop'); void comboEl.offsetWidth; comboEl.classList.add('pop');
+  }else comboEl.textContent='';
+}
+
+/* ---------- alur permainan ---------- */
+function reset(){
+  score=0; lives=3; elapsed=0; waveN=1; combo=0; comboTimer=0;
+  spawnTimer=1.6; starTimer=0.6; timeScale=1; slowTimer=0; shake=0;
+  dying=false; dieT=0;
+  enemies.length=0; pickups.length=0; parts.length=0; texts.length=0; warns.length=0;
+  player.x=W/2; player.y=H/2; player.inv=1.5; player.trail.length=0;
+  setScore(0); setCombo(0);
+  waveEl.textContent='GELOMBANG 1';
+  timeEl.textContent='0.0s';
+  buildHearts(); updateHearts();
+  document.body.classList.remove('slow');
+  slowbarEl.classList.add('hidden');
+}
+function start(){
+  audio(); reset();
+  state='playing';
+  menuEl.classList.add('hidden'); overEl.classList.add('hidden'); pauseEl.classList.add('hidden');
+  hud.classList.remove('hidden');
+}
+function pauseGame(){
+  if(state!=='playing') return;
+  state='paused'; pauseEl.classList.remove('hidden');
+}
+function resumeGame(){
+  if(state!=='paused') return;
+  state='playing'; pauseEl.classList.add('hidden');
+}
+function gameOver(){
+  state='over'; sfx.over();
+  const isBest = score>best;
+  if(isBest){ best=score; try{ localStorage.setItem('kabur_best', best); }catch(e){} }
+  bestEl.textContent='TERBAIK '+best;
+  $('finalScore').textContent=score;
+  $('finalTime').textContent=elapsed.toFixed(1)+'s';
+  $('finalBest').textContent=best;
+  $('newBest').classList.toggle('hidden', !isBest);
+  overEl.classList.remove('hidden');
+  document.body.classList.remove('slow');
+  slowbarEl.classList.add('hidden');
+}
+function hitPlayer(e){
+  lives--; updateHearts();
+  player.inv=2; shake=0.55; screenFlash(); sfx.hit();
+  burst(player.x,player.y,'#ff4d6d',26,300);
+  burst(player.x,player.y,'#ffffff',14,220);
+  burst(e.x,e.y, e.type==='seeker'?'#ff4d6d':'#b06bff',18,260);
+  e.dead=true;
+  setCombo(0);
+  if(lives<=0){
+    dying=true; dieT=1.15; timeScale=0.25;
+    burst(player.x,player.y,'#4de3ff',60,420);
+    burst(player.x,player.y,'#ffffff',30,320);
+  }
+}
+function collect(p){
+  if(p.type==='star'){
+    const c=Math.min(combo+1,9);
+    setCombo(c);
+    const gain=10*c;
+    setScore(score+gain);
+    floatText(p.x,p.y,'+'+gain,'#ffd94d',15);
+    if(c>=2) floatText(p.x,p.y-22,'x'+c,'#ffd94d',12);
+    burst(p.x,p.y,'#ffd94d',16,220);
+    sfx.pickup(c);
+  }else{
+    slowTimer=3; timeScale=0.35;
+    floatText(p.x,p.y,'WAKTU LAMBAT!','#7dffa8',16);
+    burst(p.x,p.y,'#7dffa8',22,260);
+    sfx.slow();
+  }
+  p.dead=true;
+}
+
+/* ---------- update ---------- */
+function update(dt,t){
+  const gdt=dt*timeScale; // waktu dunia (melambat saat power-up)
+
+  if(dying){
+    dieT-=dt;
+    timeScale += (0.25-timeScale)*0.1;
+    if(dieT<=0){ gameOver(); return; }
+  }else{
+    elapsed+=gdt;
+    /* gelombang */
+    const w=Math.floor(elapsed/20)+1;
+    if(w>waveN){
+      waveN=w; waveEl.textContent='GELOMBANG '+waveN;
+      floatText(W/2,H*0.3,'GELOMBANG '+waveN,'#4de3ff',28);
+      sfx.wave();
+      spawnEnemy(); spawnEnemy();
+    }
+    /* pemain mengikuti kursor (kecepatan penuh, tidak terpengaruh slow-mo) */
+    const n=Math.min(1, dt*60*0.5);
+    player.x=clamp(player.x+(mouse.x-player.x)*n, 8, W-8);
+    player.y=clamp(player.y+(mouse.y-player.y)*n, 8, H-8);
+    player.trail.unshift({x:player.x, y:player.y});
+    if(player.trail.length>15) player.trail.pop();
+    player.inv-=dt;
+
+    /* kombo */
+    if(combo>0){ comboTimer-=dt; if(comboTimer<=0) setCombo(0); }
+
+    /* timer spawn */
+    spawnTimer-=gdt;
+    if(spawnTimer<=0){ spawnTimer=spawnInterval(); spawnEnemy(); }
+    starTimer-=gdt;
+    if(starTimer<=0){
+      starTimer=rand(2.2,3.4);
+      if(pickups.filter(p=>p.type==='star').length<3) spawnPickup();
+    }
+
+    /* slow-mo */
+    if(slowTimer>0){
+      slowTimer-=dt;
+      timeScale += (0.35-timeScale)*0.25;
+      if(slowTimer<=0) slowTimer=0;
+    }else{
+      timeScale += (1-timeScale)*Math.min(1,0.08*dt*60);
+    }
+    document.body.classList.toggle('slow', slowTimer>0);
+    slowbarEl.classList.toggle('hidden', slowTimer<=0);
+    if(slowTimer>0) slowfill.style.width=(slowTimer/3*100)+'%';
+  }
+
+  /* telegraf spawn */
+  for(let i=warns.length-1;i>=0;i--){
+    const w=warns[i]; w.t-=gdt;
+    if(w.t<=0){ warns.splice(i,1); if(!dying) makeEnemy(w); }
+  }
+
+  /* musuh */
+  const sf=speedFactor();
+  for(const e of enemies){
+    if(e.type==='seeker'){
+      const dx=player.x-e.x, dy=player.y-e.y, d=Math.hypot(dx,dy)||1;
+      e.vx+=dx/d*170*sf*gdt; e.vy+=dy/d*170*sf*gdt;
+      const sp=Math.hypot(e.vx,e.vy), mx=140*sf;
+      if(sp>mx){ e.vx*=mx/sp; e.vy*=mx/sp; }
+      e.a=Math.atan2(e.vy,e.vx);
+    }else{
+      if(e.x<e.r){ e.x=e.r; e.vx=Math.abs(e.vx); }
+      if(e.x>W-e.r){ e.x=W-e.r; e.vx=-Math.abs(e.vx); }
+      if(e.y<e.r){ e.y=e.r; e.vy=Math.abs(e.vy); }
+      if(e.y>H-e.r){ e.y=H-e.r; e.vy=-Math.abs(e.vy); }
+      e.a+=3*gdt;
+    }
+    e.x+=e.vx*gdt; e.y+=e.vy*gdt;
+  }
+
+  /* pickup */
+  for(const p of pickups){
+    p.life-=gdt;
+    if(p.life<=0){ p.dead=true; continue; }
+    if(dying) continue;
+    const dx=player.x-p.x, dy=player.y-p.y, d=Math.hypot(dx,dy);
+    if(d<70){ p.x+=dx/d*260*gdt; p.y+=dy/d*260*gdt; } // magnet
+    if(d<player.r+p.r) collect(p);
+  }
+
+  /* tabrakan musuh */
+  if(!dying && player.inv<=0){
+    for(const e of enemies){
+      if(Math.hypot(e.x-player.x, e.y-player.y) < e.r+player.r){ hitPlayer(e); break; }
+    }
+  }
+  /* musuh keluar jauh -> buang */
+  for(const e of enemies){
+    if(e.x<-160||e.x>W+160||e.y<-160||e.y>H+160) e.dead=true;
+  }
+
+  /* partikel & teks */
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i]; p.life-=p.dec*gdt;
+    if(p.life<=0){ parts.splice(i,1); continue; }
+    p.x+=p.vx*gdt; p.y+=p.vy*gdt; p.vx*=0.98; p.vy*=0.98;
+  }
+  for(let i=texts.length-1;i>=0;i--){
+    const tx=texts[i]; tx.life-=dt*1.1;
+    if(tx.life<=0){ texts.splice(i,1); continue; }
+    tx.y-=30*dt;
+  }
+
+  /* bersihkan yang mati */
+  for(let i=enemies.length-1;i>=0;i--) if(enemies[i].dead) enemies.splice(i,1);
+  for(let i=pickups.length-1;i>=0;i--) if(pickups[i].dead) pickups.splice(i,1);
+
+  /* HUD */
+  timeEl.textContent=elapsed.toFixed(1)+'s';
+
+  shake=Math.max(0, shake-dt*1.4);
+}
+
+/* ---------- gambar ---------- */
+function drawStar(x,y,R,rot){
+  ctx.beginPath();
+  for(let i=0;i<10;i++){
+    const r=i%2 ? R*0.45 : R, a=rot+i*Math.PI/5;
+    const px=x+Math.cos(a)*r, py=y+Math.sin(a)*r;
+    if(i) ctx.lineTo(px,py); else ctx.moveTo(px,py);
+  }
+  ctx.closePath();
+}
+function draw(t){
+  ctx.save();
+  if(shake>0) ctx.translate(rand(-1,1)*shake*10, rand(-1,1)*shake*10);
+
+  ctx.fillStyle=bgGrad; ctx.fillRect(-12,-12,W+24,H+24);
+
+  /* bintang latar */
+  ctx.fillStyle='#aab6dd';
+  for(const s of stars){
+    ctx.globalAlpha=0.12+0.2*Math.abs(Math.sin(t*0.7+s.ph));
+    ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  /* grid samar */
+  ctx.strokeStyle='rgba(127,160,255,0.045)'; ctx.lineWidth=1;
+  ctx.beginPath();
+  for(let x=45;x<W;x+=90){ ctx.moveTo(x,0); ctx.lineTo(x,H); }
+  for(let y=45;y<H;y+=90){ ctx.moveTo(0,y); ctx.lineTo(W,y); }
+  ctx.stroke();
+
+  /* pickup */
+  for(const p of pickups){
+    const bob=Math.sin(t*3+p.ph)*3;
+    const blink=p.life<3 ? 0.35+0.65*Math.abs(Math.sin(t*8)) : 1;
+    ctx.globalAlpha=blink;
+    if(p.type==='star'){
+      ctx.shadowColor='#ffd94d'; ctx.shadowBlur=16; ctx.fillStyle='#ffd94d';
+      drawStar(p.x,p.y+bob,10,t*1.2+p.ph); ctx.fill();
+      ctx.shadowBlur=0; ctx.fillStyle='#fff6cf';
+      ctx.beginPath(); ctx.arc(p.x,p.y+bob,2.6,0,TAU); ctx.fill();
+    }else{
+      ctx.shadowColor='#7dffa8'; ctx.shadowBlur=16; ctx.fillStyle='#7dffa8';
+      ctx.beginPath(); ctx.arc(p.x,p.y+bob,8,0,TAU); ctx.fill();
+      ctx.shadowBlur=0; ctx.strokeStyle='rgba(125,255,168,.8)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(p.x,p.y+bob,13,t*4,t*4+4.2); ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  /* telegraf spawn */
+  for(const w of warns){
+    const k=Math.max(0,w.t/0.55);
+    ctx.strokeStyle='rgba(255,77,109,'+(0.85*k).toFixed(3)+')';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(w.cx,w.cy, 6+(1-k)*12, 0, TAU); ctx.stroke();
+    ctx.fillStyle='rgba(255,77,109,'+(0.7*k).toFixed(3)+')';
+    ctx.beginPath(); ctx.arc(w.cx,w.cy,2.5,0,TAU); ctx.fill();
+  }
+
+  /* musuh */
+  for(const e of enemies){
+    if(e.type==='seeker'){
+      ctx.save(); ctx.translate(e.x,e.y); ctx.rotate(e.a);
+      ctx.shadowColor='#ff4d6d'; ctx.shadowBlur=14; ctx.fillStyle='#ff4d6d';
+      ctx.beginPath(); ctx.moveTo(14,0); ctx.lineTo(-10,9); ctx.lineTo(-5,0); ctx.lineTo(-10,-9);
+      ctx.closePath(); ctx.fill();
+      ctx.shadowBlur=0; ctx.fillStyle='#ffe1e7';
+      ctx.beginPath(); ctx.arc(2,0,2.8,0,TAU); ctx.fill();
+      ctx.restore();
+    }else{
+      ctx.save(); ctx.translate(e.x,e.y); ctx.rotate(e.a);
+      ctx.shadowColor='#b06bff'; ctx.shadowBlur=14; ctx.fillStyle='#b06bff';
+      ctx.fillRect(-9,-9,18,18);
+      ctx.shadowBlur=0; ctx.fillStyle='#241040';
+      ctx.fillRect(-4,-4,8,8);
+      ctx.restore();
+    }
+  }
+
+  /* pemain */
+  if(state!=='over'){
+    for(let i=player.trail.length-1;i>=1;i--){
+      const tr=player.trail[i], k=1-i/player.trail.length;
+      ctx.globalAlpha=k*0.22;
+      ctx.fillStyle='#4de3ff';
+      ctx.beginPath(); ctx.arc(tr.x,tr.y,2+6*k,0,TAU); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+    const blink=player.inv>0 ? 0.35+0.65*Math.abs(Math.sin(t*20)) : 1;
+    ctx.globalAlpha=blink;
+    ctx.shadowColor='#4de3ff'; ctx.shadowBlur=22;
+    ctx.fillStyle='#4de3ff';
+    ctx.beginPath(); ctx.arc(player.x,player.y,player.r+3,0,TAU); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#eafcff';
+    ctx.beginPath(); ctx.arc(player.x,player.y,player.r-2,0,TAU); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  /* partikel */
+  for(const p of parts){
+    ctx.globalAlpha=Math.max(0,p.life);
+    ctx.fillStyle=p.c;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,TAU); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  /* teks melayang */
+  ctx.textAlign='center';
+  for(const tx of texts){
+    ctx.globalAlpha=Math.max(0,Math.min(1,tx.life*1.3));
+    ctx.fillStyle=tx.c;
+    ctx.font='700 '+tx.s+'px Rubik, sans-serif';
+    ctx.fillText(tx.str,tx.x,tx.y);
+  }
+  ctx.globalAlpha=1;
+
+  ctx.restore();
+}
+
+/* ---------- loop ---------- */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min((now-last)/1000, .05)||.016;
+  last=now;
+  const t=now/1000;
+  if(state==='playing') update(dt,t);
+  else if(state==='menu'){ // bola pemain mengikut di menu
+    const n=Math.min(1, dt*60*0.5);
+    player.x=clamp(player.x+(mouse.x-player.x)*n,8,W-8);
+    player.y=clamp(player.y+(mouse.y-player.y)*n,8,H-8);
+  }
+  draw(t);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- kontrol UI ---------- */
+$('btnStart').addEventListener('click', start);
+$('btnRetry').addEventListener('click', start);
+$('btnResume').addEventListener('click', resumeGame);
+menuEl.addEventListener('click', e=>{ if(e.target===menuEl) start(); });
+addEventListener('keydown', e=>{
+  if(e.code==='Space'||e.code==='Enter'){
+    e.preventDefault();
+    if(state==='menu'||state==='over') start();
+    else if(state==='paused') resumeGame();
+  }
+  if(e.code==='Escape'){
+    if(state==='playing') pauseGame();
+    else if(state==='paused') resumeGame();
+  }
+  if(e.code==='KeyM'){ audio(); toggleMute(); }
+});
+
+buildHearts();
+})();
+</script>
+</body>
+</html>
