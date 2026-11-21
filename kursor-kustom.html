@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Kursor Kustom — 1 File (HTML + CSS + JS)</title>
+<style>
+  /* ---------- Dasar ---------- */
+  * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+
+  :root {
+    --bg: #0b0d12;
+    --accent: #6ee7ff;
+    --accent-2: #a78bfa;
+    --text: #e8ecf1;
+    --muted: #8b93a3;
+  }
+
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.25rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    overflow-x: hidden;
+  }
+
+  /* ornamen latar */
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    z-index: -1;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: .3;
+    pointer-events: none;
+  }
+  body::before { width: 420px; height: 420px; background: var(--accent-2); top: -120px; left: -120px; }
+  body::after  { width: 380px; height: 380px; background: var(--accent);  bottom: -140px; right: -100px; }
+
+  h1 {
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+    letter-spacing: -.02em;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .sub { color: var(--muted); max-width: 52ch; line-height: 1.65; }
+
+  .tes { display: flex; flex-wrap: wrap; gap: 1.1rem; justify-content: center; align-items: center; }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dashed currentColor;
+    padding-bottom: 2px;
+  }
+
+  button {
+    padding: .8rem 1.7rem;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: #0b0d12;
+    font-weight: 700;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+
+  .card {
+    padding: 1.3rem 1.9rem;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .04);
+    backdrop-filter: blur(8px);
+    transition: border-color .3s, transform .3s;
+    font-weight: 600;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-3px); }
+  .card small { display: block; margin-top: .4rem; color: var(--muted); font-weight: 400; }
+
+  .chip {
+    padding: .45rem 1.05rem;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: .9rem;
+    transition: color .3s, border-color .3s;
+  }
+  .chip:hover { color: var(--accent); border-color: var(--accent); }
+
+  footer { color: var(--muted); font-size: .85rem; }
+
+  /* ============ KURSOR KUSTOM ============ */
+  .cursor {
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 9999;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  .cursor__dot,
+  .cursor__ring {
+    border-radius: 50%;
+    transition:
+      transform        .25s ease,
+      background-color .25s ease,
+      border-color     .25s ease,
+      opacity          .25s ease;
+  }
+
+  .cursor__dot {
+    width: 8px; height: 8px;
+    margin: -4px 0 0 -4px;      /* biar pas di tengah titik koordinat */
+    background: var(--accent);
+  }
+
+  .cursor__ring {
+    position: relative;
+    width: 38px; height: 38px;
+    margin: -19px 0 0 -19px;
+    border: 1.5px solid rgba(110, 231, 255, .65);
+  }
+
+  .cursor__label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .58rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: #0b0d12;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+
+  /* hover elemen interaktif → cincin membesar, titik mengecil */
+  body.is-hover .cursor__ring { transform: scale(1.55); background: rgba(110, 231, 255, .08); }
+  body.is-hover .cursor__dot  { transform: scale(.5); }
+
+  /* elemen ber-data-cursor-text → cincin jadi label */
+  body.is-text .cursor__ring  { transform: scale(2.15); background: var(--accent); border-color: transparent; }
+  body.is-text .cursor__label { opacity: 1; }
+  body.is-text .cursor__dot   { opacity: 0; }
+
+  /* klik → cincin mengecil sekejap */
+  body.is-down .cursor__ring { transform: scale(.8); }
+
+  /* mouse keluar jendela / belum digerakkan → sembunyi */
+  body.is-out .cursor__dot,
+  body.is-out .cursor__ring { opacity: 0; }
+
+  /* perangkat sentuh → kursor asli kembali normal */
+  @media (hover: none), (pointer: coarse) {
+    * { cursor: auto; }
+    .cursor { display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <h1>Kursor Kustom</h1>
+  <p class="sub">
+    Gerakkan mouse-mu: titik kecil mengikuti langsung, cincinnya menyusul dengan
+    gerakan halus. Arahkan ke elemen di bawah atau klik di mana saja untuk melihat reaksinya.
+  </p>
+
+  <div class="tes">
+    <a href="#" onclick="event.preventDefault()">Coba hover di link</a>
+    <button type="button">Tombol</button>
+    <div class="card" data-cursor-text="LIHAT">
+      Kartu interaktif
+      <small>cincin berubah jadi label</small>
+    </div>
+  </div>
+
+  <div class="tes">
+    <span class="chip" data-hover>html</span>
+    <span class="chip" data-hover>css</span>
+    <span class="chip" data-hover>js</span>
+    <span class="chip" data-hover>1&nbsp;file</span>
+  </div>
+
+  <footer>tanpa library · tanpa file eksternal · fallback otomatis di perangkat sentuh</footer>
+
+  <!-- Elemen kursor (murni visual, tak bisa diklik) -->
+  <div class="cursor" aria-hidden="true" data-cursor="dot"><div class="cursor__dot"></div></div>
+  <div class="cursor" aria-hidden="true" data-cursor="ring">
+    <div class="cursor__ring"><span class="cursor__label"></span></div>
+  </div>
+
+<script>
+  (() => {
+    const dot   = document.querySelector('[data-cursor="dot"]');
+    const ring  = document.querySelector('[data-cursor="ring"]');
+    const label = ring.querySelector('.cursor__label');
+
+    // Perangkat sentuh: biarkan kursor bawaan, matikan animasi ini.
+    if (matchMedia('(hover: none), (pointer: coarse)').matches) return;
+
+    let mx = innerWidth  / 2, my = innerHeight / 2;  // posisi mouse sebenarnya
+    let rx = mx,             ry = my;                // posisi cincin (di-lerp)
+
+    // Mulai tersembunyi, muncul saat mouse pertama kali digerakkan.
+    document.body.classList.add('is-out');
+
+    addEventListener('mousemove', (e) => {
+      mx = e.clientX;
+      my = e.clientY;
+      dot.style.transform = `translate(${mx}px, ${my}px)`;
+      document.body.classList.remove('is-out');
+    });
+
+    // Cincin menyusul dengan interpolasi (lerp) — makin kecil faktornya, makin lambat.
+    (function loop() {
+      rx += (mx - rx) * 0.16;
+      ry += (my - ry) * 0.16;
+      ring.style.transform = `translate(${rx}px, ${ry}px)`;
+      requestAnimationFrame(loop);
+    })();
+
+    // Deteksi hover: link, tombol, atau elemen apapun dengan atribut [data-hover].
+    const HOVER_SELECTOR = 'a, button, [data-hover]';
+    document.addEventListener('mouseover', (e) => {
+      document.body.classList.toggle('is-hover', !!e.target.closest(HOVER_SELECTOR));
+
+      const teks = e.target.closest('[data-cursor-text]');
+      if (teks) {
+        label.textContent = teks.dataset.cursorText;
+        document.body.classList.add('is-text');
+      } else {
+        document.body.classList.remove('is-text');
+      }
+    });
+
+    // Efek mengecil saat klik.
+    addEventListener('mousedown', () => document.body.classList.add('is-down'));
+    addEventListener('mouseup',   () => document.body.classList.remove('is-down'));
+
+    // Sembunyikan saat mouse meninggalkan jendela.
+    document.documentElement.addEventListener('mouseleave', () => document.body.classList.add('is-out'));
+    document.documentElement.addEventListener('mouseenter', () => document.body.classList.remove('is-out'));
+  })();
+</script>
+</body>
+</html>
